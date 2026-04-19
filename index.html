@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>重生之我带中国队勇夺世界杯</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 复古 CRT 终端风格样式 */
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
+
+        :root {
+            --crt-green: #33FF00;
+            --crt-green-dim: #1a8000;
+            --crt-bg: #000000;
+        }
+
+        body {
+            background-color: var(--crt-bg);
+            color: var(--crt-green);
+            font-family: 'Fira Code', 'Courier New', monospace;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 扫描线图层 */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.25) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.05),
+                rgba(0, 255, 0, 0.02),
+                rgba(0, 0, 255, 0.05)
+            );
+            background-size: 100% 2px, 3px 100%;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        /* CRT 闪烁感 */
+        @keyframes flicker {
+            0% { opacity: 0.98; }
+            5% { opacity: 0.95; }
+            10% { opacity: 0.99; }
+            11% { opacity: 0.92; }
+            12% { opacity: 0.99; }
+            15% { opacity: 0.95; }
+            30% { opacity: 0.98; }
+            35% { opacity: 0.93; }
+            40% { opacity: 0.99; }
+            45% { opacity: 0.95; }
+            60% { opacity: 0.98; }
+            70% { opacity: 0.96; }
+            80% { opacity: 0.99; }
+            90% { opacity: 0.95; }
+            100% { opacity: 0.98; }
+        }
+
+        .crt-monitor {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            animation: flicker 0.15s infinite;
+            text-shadow: 0 0 5px rgba(51, 255, 0, 0.7);
+        }
+
+        /* 打字机光标 */
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.2em;
+            background: var(--crt-green);
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* 选项按钮反馈 */
+        .btn-choice {
+            transition: transform 0.05s, background-color 0.1s;
+            border: 1px solid var(--crt-green);
+            box-shadow: 0 0 5px rgba(51, 255, 0, 0.2);
+        }
+        .btn-choice:active {
+            transform: scale(0.97);
+            background-color: var(--crt-green);
+            color: black;
+            text-shadow: none;
+        }
+
+        /* 荧光发光文字 */
+        .glow-text {
+            text-shadow: 0 0 10px rgba(51, 255, 0, 0.8);
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--crt-green-dim);
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="app" class="relative h-screen flex flex-col">
+        <!-- 扫描线滤镜 -->
+        <div class="scanlines"></div>
+        
+        <div class="crt-monitor p-5 flex-1 flex flex-col relative z-10">
+            <!-- 顶部状态栏 -->
+            <header class="border-b-2 border-[#33FF00] pb-3 mb-6">
+                <div class="flex justify-between items-end">
+                    <div class="space-y-1">
+                        <div class="text-[10px] opacity-60">MAGICAL_STABILITY_OS</div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs">[魔幻值]</span>
+                            <div class="w-20 sm:w-32 h-2 bg-black border border-[#33FF00] overflow-hidden">
+                                <div class="h-full bg-[#33FF00] transition-all duration-500" :style="{ width: magicValue + '%' }"></div>
+                            </div>
+                            <span class="font-bold text-xs">{{ magicValue }}</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-[10px] opacity-60">HOT_INDEX_RT</div>
+                        <div class="text-xl font-bold glow-text leading-none">{{ hotValue }}</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 核心剧情区 -->
+            <main class="flex-1 overflow-y-auto font-bold mb-6 custom-scrollbar">
+                <div class="mb-5 text-xl sm:text-2xl glow-text border-l-4 border-[#33FF00] pl-4 py-1 leading-tight uppercase">
+                    {{ currentEvent.title }}
+                </div>
+                
+                <div class="text-lg sm:text-xl leading-relaxed min-h-[140px] opacity-90 tracking-wide">
+                    <span v-html="displayText"></span>
+                    <span v-if="isTyping" class="cursor"></span>
+                </div>
+            </main>
+
+            <!-- 底部选项区 / 重启区 -->
+            <footer class="pb-8">
+                <!-- 正常决策阶段 -->
+                <div v-if="!currentEvent.isEnd && !isTyping" class="space-y-4">
+                    <button v-for="(choice, index) in currentEvent.choices" 
+                            :key="index"
+                            @click="handleChoice(choice)"
+                            class="btn-choice w-full py-4 px-4 text-left font-bold text-sm sm:text-base flex items-start space-x-3 bg-black hover:bg-[#33FF00] hover:text-black transition-colors rounded">
+                        <span class="flex-shrink-0 opacity-70">[{{ String.fromCharCode(65 + index) }}]</span>
+                        <span class="flex-1 uppercase tracking-tighter">{{ choice.text }}</span>
+                    </button>
+                </div>
+
+                <!-- 游戏结束/结局阶段 -->
+                <div v-if="currentEvent.isEnd && !isTyping" class="space-y-5">
+                    <div class="text-center text-xs opacity-50 py-2 border-y border-[#33FF00] border-dashed">
+                        SESSION_COMPLETED // FINAL_STATS: MAGIC_{{ magicValue }} HOT_{{ hotValue }}
+                    </div>
+                    <button @click="restartGame"
+                            class="btn-choice w-full py-5 px-4 bg-transparent text-center font-bold text-lg border-2 border-[#33FF00] uppercase tracking-widest hover:bg-[#33FF00] hover:text-black">
+                         [ 重新应聘 (RESTART) ]
+                    </button>
+                    <div class="text-center text-[10px] opacity-40 italic">
+                        "伟大，无需多言。" - 某不愿透露姓名的主帅
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+
+        const EVENT_DATA = {
+            "start_01": {
+                "title": "第一幕：草台班子",
+                "description": "足协逼迫你3天内组建国家队，否则把你送进电子厂打螺丝。你去哪里选人？",
+                "choices": [
+                    { "text": "去正规青训营选人", "magicDelta": -50, "hotDelta": 0, "next": "game_over_1" },
+                    { "text": "去街头和洗浴中心选全员恶人", "magicDelta": 80, "hotDelta": 50, "next": "event_usa_01" }
+                ]
+            },
+            "event_usa_01": {
+                "title": "第四幕：美式斩杀线",
+                "description": "决赛对阵美国队。对方体力爆表，但线人报告对方一半球员年薪卡在福利悬崖边缘，一旦多赚一点钱就会失去医疗保险...",
+                "choices": [
+                    { "text": "硬碰硬拼体力！", "magicDelta": -50, "hotDelta": 0, "next": "game_over_2" },
+                    { "text": "强制打赏每人50美元，注销他们医保！", "magicDelta": 100, "hotDelta": 1000, "next": "ending_true_god" }
+                ]
+            },
+            "game_over_1": {
+                "title": "惨败！",
+                "description": "你因试图用正常战术拯救国足，被连夜开除进厂打螺丝。游戏结束。正常的逻辑在这里是行不通的，孩子。",
+                "isEnd": true
+            },
+            "game_over_2": {
+                "title": "惨败！",
+                "description": "你低估了美国底层人民不干活就没饭吃的求生欲，被无情碾压。游戏结束。没有奇迹，只有被现实吊打。",
+                "isEnd": true
+            },
+            "ending_true_god": {
+                "title": "夺冠！资本终极梦魇！",
+                "description": "伟大，无需多言！你用区区50美元把美国队逼入无医保斩杀线，全员不敢碰球生怕受伤。中国队捧起大力神杯！你掌握了世界的终极因果律。",
+                "isEnd": true
+            }
+        };
+
+        createApp({
+            setup() {
+                const magicValue = ref(50);
+                const hotValue = ref(0);
+                const currentEventId = ref('start_01');
+                const displayText = ref('');
+                const isTyping = ref(false);
+                let typingInterval = null;
+
+                const currentEvent = computed(() => EVENT_DATA[currentEventId.value]);
+
+                const startTyping = (text) => {
+                    clearInterval(typingInterval);
+                    displayText.value = '';
+                    isTyping.value = true;
+                    let i = 0;
+                    typingInterval = setInterval(() => {
+                        if (i < text.length) {
+                            displayText.value += text[i];
+                            i++;
+                        } else {
+                            clearInterval(typingInterval);
+                            isTyping.value = false;
+                        }
+                    }, 35); // 稍微加快一点打字速度提升手感
+                };
+
+                const handleChoice = (choice) => {
+                    magicValue.value = Math.max(0, Math.min(100, magicValue.value + choice.magicDelta));
+                    hotValue.value += choice.hotDelta;
+
+                    if (magicValue.value <= 0) {
+                        currentEventId.value = 'game_over_1';
+                    } else {
+                        currentEventId.value = choice.next;
+                    }
+                };
+
+                const restartGame = () => {
+                    magicValue.value = 50;
+                    hotValue.value = 0;
+                    currentEventId.value = 'start_01';
+                };
+
+                watch(currentEventId, (newId) => {
+                    startTyping(EVENT_DATA[newId].description);
+                }, { immediate: true });
+
+                return {
+                    magicValue,
+                    hotValue,
+                    currentEventId,
+                    currentEvent,
+                    displayText,
+                    isTyping,
+                    handleChoice,
+                    restartGame
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
+
